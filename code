@@ -1,0 +1,246 @@
+//
+// CISC 192 Shada E.
+//
+
+#ifndef TASK_H
+#define TASK_H
+
+#include <string>
+
+class Task {
+private:
+    int id;
+    std::string description;
+    bool completed;
+
+public:
+    Task();
+    Task(int id, const std::string& desc);
+
+    void markCompleted();
+    bool isCompleted() const;
+    int getId() const;
+    std::string getDescription() const;
+};
+
+#endif
+
+
+
+
+
+#include "Task.h"
+
+Task::Task() : id(0), description(""), completed(false) {}
+
+Task::Task(int id, const std::string& desc)
+    : id(id), description(desc), completed(false) {}
+
+void Task::markCompleted() {
+    completed = true;
+}
+
+bool Task::isCompleted() const {
+    return completed;
+}
+
+int Task::getId() const {
+    return id;
+}
+
+std::string Task::getDescription() const {
+    return description;
+}
+
+
+
+
+#ifndef TASKMANAGER_H
+#define TASKMANAGER_H
+
+#include <memory>
+#include "Task.h"
+
+class TaskManager {
+private:
+    std::unique_ptr<Task[]> tasks;
+    int size;
+    int capacity;
+
+    void resize();
+
+public:
+    TaskManager(int initialCapacity);
+
+    void addTask(const std::string& desc);
+    void removeTask(int id);
+    void listTasks() const;
+};
+
+#endif
+
+
+
+
+
+#include "TaskManager.h"
+#include <iostream>
+
+TaskManager::TaskManager(int initialCapacity)
+    : size(0), capacity(initialCapacity) {
+    tasks = std::make_unique<Task[]>(capacity);
+}
+
+void TaskManager::resize() {
+    capacity *= 2;
+    auto newTasks = std::make_unique<Task[]>(capacity);
+
+    for (int i = 0; i < size; i++) {
+        newTasks[i] = tasks[i];
+    }
+
+    tasks = std::move(newTasks);
+}
+
+void TaskManager::addTask(const std::string& desc) {
+    if (size == capacity) {
+        resize();
+    }
+
+    tasks[size] = Task(size + 1, desc);
+    size++;
+}
+
+void TaskManager::removeTask(int id) {
+    for (int i = 0; i < size; i++) {
+        if (tasks[i].getId() == id) {
+            for (int j = i; j < size - 1; j++) {
+                tasks[j] = tasks[j + 1];
+            }
+            size--;
+            return;
+        }
+    }
+}
+
+void TaskManager::listTasks() const {
+    for (int i = 0; i < size; i++) {
+        std::cout << tasks[i].getId() << ". "
+                  << tasks[i].getDescription()
+                  << (tasks[i].isCompleted() ? " [Done]" : "")
+                  << std::endl;
+    }
+}
+
+
+
+
+
+#include <iostream>
+#include "Task.h"
+#include "TaskManager.h"
+
+//
+// Part A Helper Function
+//
+void completeTask(Task* t) {
+    if (t != nullptr) {
+        t->markCompleted();
+    }
+}
+
+//
+// Part B Functions
+//
+void addTask(Task* tasks, int& size, int capacity, const std::string& desc) {
+    if (size >= capacity) {
+        std::cout << "Task list is full.\n";
+        return;
+    }
+    tasks[size] = Task(size + 1, desc);
+    size++;
+}
+
+void removeTask(Task* tasks, int& size, int id) {
+    for (int i = 0; i < size; i++) {
+        if ((tasks + i)->getId() == id) {
+            for (int j = i; j < size - 1; j++) {
+                *(tasks + j) = *(tasks + j + 1);
+            }
+            size--;
+            return;
+        }
+    }
+}
+
+void listTasks(Task* tasks, int size) {
+    for (int i = 0; i < size; i++) {
+        std::cout << (tasks + i)->getId()
+                  << ". " << (tasks + i)->getDescription()
+                  << std::endl;
+    }
+}
+
+//
+// MAIN
+//
+int main() {
+
+    //
+    // Part A — Stack Objects
+    //
+    std::cout << "=== Part A: Raw Pointers to Stack Objects ===\n";
+
+    Task t1(1, "Finish project");
+    Task t2(2, "Study for finals");
+
+    Task* p1 = &t1;
+    Task* p2 = &t2;
+
+    completeTask(p1);
+
+    std::cout << p1->getDescription()
+              << (p1->isCompleted() ? " [Done]\n" : "\n");
+
+    std::cout << p2->getDescription()
+              << (p2->isCompleted() ? " [Done]\n" : "\n");
+
+    // 
+    // Part B — Raw Heap Pointers
+    // 
+    std::cout << "\n=== Part B: Dynamic Memory Using Raw Pointers ===\n";
+
+    int capacity = 5;
+    int size = 0;
+    Task* tasks = new Task[capacity];
+
+    addTask(tasks, size, capacity, "Read book");
+    addTask(tasks, size, capacity, "Write essay");
+    addTask(tasks, size, capacity, "Go to library");
+
+    listTasks(tasks, size);
+    removeTask(tasks, size, 2);
+
+    std::cout << "\nAfter removal:\n";
+    listTasks(tasks, size);
+
+    delete[] tasks; //  required
+
+    //
+    // Part C — Smart Pointers
+    //
+    std::cout << "\n=== Part C: Small Pointer Version ===\n";
+
+    TaskManager manager(3);
+    manager.addTask("Clean room");
+    manager.addTask("Finish homework");
+    manager.addTask("Go to cafe with friend");
+
+    manager.listTasks();
+    manager.removeTask(2);
+
+    std::cout << "\nAfter removal:\n";
+    manager.listTasks();
+
+    return 0;
+}
